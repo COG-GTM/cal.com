@@ -1,6 +1,17 @@
-const { execSync } = require("node:child_process");
+const { execFileSync, execSync } = require("node:child_process");
+const { existsSync } = require("node:fs");
 
 const CLIENT_FILES_PATH = ".next/static/chunks";
+// Fixed, non user-writable locations, so the binary is never resolved through PATH
+const GIT_BINARIES = ["/usr/bin/git", "/usr/local/bin/git", "/bin/git"];
+
+const getReleaseSha = () => {
+  const gitBinary = GIT_BINARIES.find((binary) => existsSync(binary));
+  if (!gitBinary) {
+    throw new Error(`git executable not found in any of: ${GIT_BINARIES.join(", ")}`);
+  }
+  return execFileSync(gitBinary, ["rev-parse", "HEAD"]).toString().trim();
+};
 
 try {
   // Continue if required any env vars are not set
@@ -13,7 +24,7 @@ try {
     process.exit(0);
   }
 
-  const release = execSync("git rev-parse HEAD").toString().trim();
+  const release = getReleaseSha();
 
   // Add release
   execSync(`sentry-cli releases new ${release}`, { stdio: "inherit" });

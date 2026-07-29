@@ -19,6 +19,7 @@ interface CheckoutOptions {
 interface HitPayOptions {
   visible: boolean;
   defaultUrl: string;
+  targetOrigin: string;
   initOptions: InitOptions;
   callbacks?: Callbacks;
   checkoutOptions: CheckoutOptions;
@@ -46,6 +47,7 @@ export const useHitPayDropIn = (): HitPayDropInResult => {
   const hitPayOptions = useRef<HitPayOptions>({
     visible: false,
     defaultUrl: "",
+    targetOrigin: "",
     initOptions: { scheme: "", domain: "" },
     checkoutOptions: {},
   });
@@ -68,7 +70,10 @@ export const useHitPayDropIn = (): HitPayDropInResult => {
 
       document.body.style.cssText = "width: 100vw; height: 100vh; overflow: hidden; margin: 0; padding: 0;";
 
-      const iframeSrc = `${scheme}://${domain}${path}/hitpay-iframe.html?post-parent=true&timestamp=${Date.now()}`;
+      const targetOrigin = `${scheme}://${domain}`;
+      hitPayOptions.current.targetOrigin = targetOrigin;
+
+      const iframeSrc = `${targetOrigin}${path}/hitpay-iframe.html?post-parent=true&timestamp=${Date.now()}`;
 
       iframe.current = document.createElement("iframe");
       iframe.current.setAttribute("src", iframeSrc);
@@ -118,7 +123,7 @@ export const useHitPayDropIn = (): HitPayDropInResult => {
             checkoutOptions,
           },
         },
-        "*"
+        hitPayOptions.current.targetOrigin
       );
 
       hitPayOptions.current.visible = !hitPayOptions.current.visible;
