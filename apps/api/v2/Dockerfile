@@ -14,7 +14,10 @@ ENV DATABASE_DIRECT_URL=${DATABASE_DIRECT_URL}
 ENV DATABASE_URL=${DATABASE_URL}
 ENV USE_POOL="true"
 
-COPY . .
+RUN chown node:node /calcom
+USER node
+
+COPY --chown=node:node . .
 
 RUN yarn install
 RUN yarn workspace @calcom/api-v2 run generate-schemas
