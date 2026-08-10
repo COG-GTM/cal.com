@@ -1,3 +1,5 @@
+import dayjs from "@calcom/dayjs";
+import { TimeFormat } from "@calcom/lib/timeFormat";
 import { describe, expect, it } from "vitest";
 import customTemplate, {
   formatIdentifierToVariable,
@@ -147,5 +149,40 @@ describe("customTemplate - variable replacement", () => {
     );
 
     expect(result.text).toBe("Options: Option A, Option B, Option C");
+  });
+
+  it("formats custom event dates and end times using placeholder formats", () => {
+    const result = customTemplate(
+      "{EVENT_DATE_YYYY-MM-DD} {EVENT_TIME_HH:mm} {START_TIME_HH:mm} {EVENT_END_TIME_HH:mm}",
+      {
+        ...baseVariables,
+        eventDate: dayjs("2025-06-15T10:00:00Z"),
+        eventEndTime: dayjs("2025-06-15T11:00:00Z"),
+      },
+      "en",
+      TimeFormat.TWENTY_FOUR_HOUR,
+      true
+    );
+
+    expect(result.text).toContain("2025-06-15");
+    expect(result.text).toContain("10:00");
+    expect(result.text).toContain("11:00");
+  });
+
+  it("renders response values with object values and ignores undefined responses", () => {
+    const responses = transformBookingResponsesToVariableFormat({
+      Account_Manager: { value: { value: "Alex", optionValue: "alex" }, label: "Account Manager" },
+      Empty_Field: { value: "", label: "Empty Field" },
+    });
+
+    const result = customTemplate(
+      "Manager: {ACCOUNT_MANAGER}; Empty: {EMPTY_FIELD}",
+      { ...baseVariables, responses },
+      "en",
+      undefined,
+      true
+    );
+
+    expect(result.text).toBe("Manager: [object Object]; Empty: ");
   });
 });
