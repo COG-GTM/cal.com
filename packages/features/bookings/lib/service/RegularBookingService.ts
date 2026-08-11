@@ -33,6 +33,7 @@ import type { CheckBookingAndDurationLimitsService } from "@calcom/features/book
 import { handlePayment } from "@calcom/features/bookings/lib/handlePayment";
 import { handleWebhookTrigger } from "@calcom/features/bookings/lib/handleWebhookTrigger";
 import { isEventTypeLoggingEnabled } from "@calcom/features/bookings/lib/isEventTypeLoggingEnabled";
+import { validateBookingTimeIsWithinHashedLinkWindow } from "@calcom/features/bookings/lib/handleNewBooking/validateBookingTimeIsWithinHashedLinkWindow";
 import type { BookingEventHandlerService } from "@calcom/features/bookings/lib/onBookingEvents/BookingEventHandlerService";
 import type { BookingRescheduledPayload } from "@calcom/features/bookings/lib/onBookingEvents/types.d";
 import type { BookingEmailAndSmsTasker } from "@calcom/features/bookings/lib/tasker/BookingEmailAndSmsTasker";
@@ -842,6 +843,16 @@ async function handler(
     eventTimeZone,
     tracingLogger
   );
+
+  if (reqBody.hashedLink) {
+    await validateBookingTimeIsWithinHashedLinkWindow({
+      hashedLink: reqBody.hashedLink,
+      eventTypeId,
+      reqBodyStart: reqBody.start,
+      reqBodyEnd: reqBody.end,
+      hashedLinkService: deps.hashedLinkService,
+    });
+  }
 
   validateEventLength({
     reqBodyStart: reqBody.start,

@@ -145,6 +145,7 @@ const BookerWebWrapperComponent = (props: BookerWebWrapperAtomProps): JSX.Elemen
     duration: props.duration,
     selectedDate,
     teamMemberEmail: props.teamMemberEmail,
+    hashedLink: props.hashedLink,
     fromRedirectOfNonOrgLink: props.entity.fromRedirectOfNonOrgLink,
     isTeamEvent: props.isTeamEvent ?? !!event.data?.team,
     useApiV2: props.useApiV2,

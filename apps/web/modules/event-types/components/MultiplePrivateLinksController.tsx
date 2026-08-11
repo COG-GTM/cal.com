@@ -1,10 +1,5 @@
-import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
-
 import dayjs from "@calcom/dayjs";
-import type { EventTypeSetupProps } from "@calcom/features/eventtypes/lib/types";
-import type { FormValues, PrivateLinkWithOptions } from "@calcom/features/eventtypes/lib/types";
+import type { EventTypeSetupProps, FormValues, PrivateLinkWithOptions } from "@calcom/features/eventtypes/lib/types";
 import { generateHashedLink } from "@calcom/lib/generateHashedLink";
 import { isLinkExpired as utilsIsLinkExpired } from "@calcom/lib/hashedLinksUtils";
 import { useCopy } from "@calcom/lib/hooks/useCopy";
@@ -14,12 +9,13 @@ import classNames from "@calcom/ui/classNames";
 import { Badge } from "@calcom/ui/components/badge";
 import { Button } from "@calcom/ui/components/button";
 import { Dialog, DialogContent } from "@calcom/ui/components/dialog";
-import { TextField } from "@calcom/ui/components/form";
-import { DatePicker } from "@calcom/ui/components/form";
-import { NumberInput } from "@calcom/ui/components/form";
+import { DatePicker, NumberInput, TextField } from "@calcom/ui/components/form";
 import { RadioAreaGroup as RadioArea } from "@calcom/ui/components/radio";
 import { showToast } from "@calcom/ui/components/toast";
 import { Tooltip } from "@calcom/ui/components/tooltip";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { useState } from "react";
+import { Controller, useFormContext } from "react-hook-form";
 
 export const MultiplePrivateLinksController = ({
   team,
@@ -39,6 +35,10 @@ export const MultiplePrivateLinksController = ({
   const [selectedType, setSelectedType] = useState<"time" | "usage">("usage");
   const [expiryDate, setExpiryDate] = useState<Date>(new Date());
   const [maxUsageCount, setMaxUsageCount] = useState<number | null>(1);
+  const [bookingWindowEnabled, setBookingWindowEnabled] = useState(false);
+  const [bookingWindowDate, setBookingWindowDate] = useState<Date>(new Date());
+  const [bookingWindowStart, setBookingWindowStart] = useState("09:00");
+  const [bookingWindowEnd, setBookingWindowEnd] = useState("17:00");
 
   // Updates the form data directly when settings change
   const updateLinkSettings = (
@@ -83,6 +83,45 @@ export const MultiplePrivateLinksController = ({
     });
   };
 
+  const updateBookingWindow = (index: number | null) => {
+    if (index === null) return;
+
+    const currentValue = formMethods.getValues("multiplePrivateLinks") || [];
+    const convertedValue = currentValue.map((val: string | PrivateLinkWithOptions) =>
+      typeof val === "string" ? { link: val, expiresAt: null, maxUsageCount: 1, usageCount: 0 } : val
+    );
+
+    if (!bookingWindowEnabled) {
+      convertedValue[index] = {
+        ...convertedValue[index],
+        bookingWindowStart: null,
+        bookingWindowEnd: null,
+      };
+    } else {
+      const timezone = userTimeZone || "UTC";
+      const date = dayjs(bookingWindowDate).format("YYYY-MM-DD");
+      const start = dayjs.tz(`${date} ${bookingWindowStart}`, timezone);
+      const end = dayjs.tz(`${date} ${bookingWindowEnd}`, timezone);
+
+      if (!start.isValid() || !end.isValid() || !end.isAfter(start)) {
+        showToast(t("booking_window_end_must_be_after_start"), "error");
+        return;
+      }
+
+      convertedValue[index] = {
+        ...convertedValue[index],
+        bookingWindowStart: start.toDate(),
+        bookingWindowEnd: end.toDate(),
+      };
+    }
+
+    formMethods.setValue("multiplePrivateLinks", convertedValue, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
+
   const openSettingsDialog = (index: number, currentLink: PrivateLinkWithOptions) => {
     setCurrentLinkIndex(index);
     if (currentLink.expiresAt) {
@@ -92,6 +131,16 @@ export const MultiplePrivateLinksController = ({
     } else {
       setSelectedType("usage");
       setMaxUsageCount(currentLink.maxUsageCount ?? 1);
+    }
+    const hasBookingWindow = !!currentLink.bookingWindowStart && !!currentLink.bookingWindowEnd;
+    setBookingWindowEnabled(hasBookingWindow);
+    if (hasBookingWindow) {
+      const timezone = userTimeZone || "UTC";
+      const start = dayjs.utc(currentLink.bookingWindowStart).tz(timezone);
+      const end = dayjs.utc(currentLink.bookingWindowEnd).tz(timezone);
+      setBookingWindowDate(start.toDate());
+      setBookingWindowStart(start.format("HH:mm"));
+      setBookingWindowEnd(end.format("HH:mm"));
     }
     setIsDialogOpen(true);
   };
@@ -126,9 +175,24 @@ export const MultiplePrivateLinksController = ({
             expiresAt: Date | null;
             maxUsageCount: number | null;
             usageCount: number;
+            bookingWindowStart: Date | null;
+            bookingWindowEnd: Date | null;
           };
 
           const linkDataMap = new Map(allLinksData?.map((data: HashedLinkData) => [data.linkId, data]) || []);
+
+          const getLinkWithLatestData = (link: PrivateLinkWithOptions): PrivateLinkWithOptions => {
+            const latestLinkData = linkDataMap.get(link.link);
+            if (!latestLinkData) return link;
+
+            return {
+              ...link,
+              bookingWindowStart:
+                "bookingWindowStart" in link ? link.bookingWindowStart : latestLinkData.bookingWindowStart,
+              bookingWindowEnd:
+                "bookingWindowEnd" in link ? link.bookingWindowEnd : latestLinkData.bookingWindowEnd,
+            };
+          };
 
           const addPrivateLink = () => {
             const userId = formMethods.getValues("users")?.[0]?.id ?? team?.id;
@@ -139,6 +203,8 @@ export const MultiplePrivateLinksController = ({
               expiresAt: null,
               maxUsageCount: 1,
               usageCount: 0,
+              bookingWindowStart: null,
+              bookingWindowEnd: null,
             };
 
             const newValue = [...convertedValue, newPrivateLink];
@@ -254,12 +320,13 @@ export const MultiplePrivateLinksController = ({
               {sortedLinksWithIndex.map(({ val, originalIndex }, key) => {
                 const singleUseURL = `${bookerUrl}/d/${val.link}/${formMethods.getValues("slug")}`;
 
+                const linkWithLatestData = getLinkWithLatestData(val);
                 const latestLinkData = linkDataMap.get(val.link);
                 const latestUsageCount =
                   latestLinkData?.usageCount ?? ((val as PrivateLinkWithOptions).usageCount || 0);
 
-                const isExpired = isLinkExpired(val);
-                const linkDescription = getLinkDescription(val, latestUsageCount);
+                const isExpired = isLinkExpired(linkWithLatestData);
+                const linkDescription = getLinkDescription(linkWithLatestData, latestUsageCount);
 
                 return (
                   <li data-testid="add-single-use-link" className="mb-4 flex flex-col" key={val.link}>
@@ -314,7 +381,7 @@ export const MultiplePrivateLinksController = ({
                             variant="icon"
                             StartIcon="settings"
                             data-testid="private-link-settings"
-                            onClick={() => openSettingsDialog(originalIndex, val)}
+                            onClick={() => openSettingsDialog(originalIndex, linkWithLatestData)}
                           />
                         )}
                         <Button
@@ -330,6 +397,20 @@ export const MultiplePrivateLinksController = ({
                     </div>
                     <div data-testid="private-link-description" className="mt-1 text-sm text-gray-500">
                       {linkDescription}
+                      {linkWithLatestData.bookingWindowStart && linkWithLatestData.bookingWindowEnd && (
+                        <div>
+                          {t("booking_window_description", {
+                            start: dayjs
+                              .utc(linkWithLatestData.bookingWindowStart)
+                              .tz(userTimeZone || "UTC")
+                              .format("MMM DD, HH:mm"),
+                            end: dayjs
+                              .utc(linkWithLatestData.bookingWindowEnd)
+                              .tz(userTimeZone || "UTC")
+                              .format("MMM DD, HH:mm"),
+                          })}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );
@@ -410,6 +491,35 @@ export const MultiplePrivateLinksController = ({
             </RadioArea.Group>
           </div>
 
+          <div className="border-subtle mb-4 border-t pt-4">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={bookingWindowEnabled}
+                onChange={(event) => setBookingWindowEnabled(event.target.checked)}
+              />
+              {t("booking_window")}
+            </label>
+            <p className="mt-1 text-sm text-gray-500">{t("booking_window_description_generic")}</p>
+            {bookingWindowEnabled && (
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <DatePicker date={bookingWindowDate} onDatesChange={setBookingWindowDate} />
+                <TextField
+                  type="time"
+                  label={t("booking_window_start")}
+                  value={bookingWindowStart}
+                  onChange={(event) => setBookingWindowStart(event.target.value)}
+                />
+                <TextField
+                  type="time"
+                  label={t("booking_window_end")}
+                  value={bookingWindowEnd}
+                  onChange={(event) => setBookingWindowEnd(event.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="mb-4 mt-4 flex justify-end">
             <Button
               type="button"
@@ -422,6 +532,7 @@ export const MultiplePrivateLinksController = ({
                 } else {
                   updateLinkSettings(currentLinkIndex, "usage", undefined, maxUsageCount);
                 }
+                updateBookingWindow(currentLinkIndex);
                 setIsDialogOpen(false);
               }}>
               {t("save")}

@@ -6,6 +6,8 @@ export type HashedLinkInputType = {
   link: string;
   expiresAt?: Date | null;
   maxUsageCount?: number | null;
+  bookingWindowStart?: Date | null;
+  bookingWindowEnd?: Date | null;
 };
 
 export const hashedLinkSelect = {
@@ -15,6 +17,8 @@ export const hashedLinkSelect = {
   expiresAt: true,
   maxUsageCount: true,
   usageCount: true,
+  bookingWindowStart: true,
+  bookingWindowEnd: true,
   eventType: {
     select: {
       userId: true,
@@ -98,14 +102,13 @@ export class HashedLinkRepository {
     });
   }
 
-  async createLink(
-    eventTypeId: number,
-    linkData: { link: string; expiresAt: Date | null; maxUsageCount?: number | null }
-  ) {
+  async createLink(eventTypeId: number, linkData: HashedLinkInputType) {
     const data: Prisma.HashedLinkCreateManyInput = {
       eventTypeId,
       link: linkData.link,
       expiresAt: linkData.expiresAt,
+      bookingWindowStart: linkData.bookingWindowStart,
+      bookingWindowEnd: linkData.bookingWindowEnd,
     };
 
     if (linkData.maxUsageCount && Number.isFinite(linkData.maxUsageCount)) {
@@ -115,12 +118,11 @@ export class HashedLinkRepository {
     return await this.prismaClient.hashedLink.create({ data });
   }
 
-  async updateLink(
-    eventTypeId: number,
-    linkData: { link: string; expiresAt: Date | null; maxUsageCount?: number | null }
-  ) {
+  async updateLink(eventTypeId: number, linkData: HashedLinkInputType) {
     const updateData: Prisma.HashedLinkUpdateManyMutationInput = {
       expiresAt: linkData.expiresAt,
+      bookingWindowStart: linkData.bookingWindowStart,
+      bookingWindowEnd: linkData.bookingWindowEnd,
     };
 
     if (typeof linkData.maxUsageCount === "number" && linkData.maxUsageCount !== null) {
@@ -146,6 +148,8 @@ export class HashedLinkRepository {
         expiresAt: true,
         maxUsageCount: true,
         usageCount: true,
+        bookingWindowStart: true,
+        bookingWindowEnd: true,
       },
     });
   }
@@ -161,6 +165,8 @@ export class HashedLinkRepository {
         expiresAt: true,
         maxUsageCount: true,
         usageCount: true,
+        bookingWindowStart: true,
+        bookingWindowEnd: true,
         eventTypeId: true,
         eventType: {
           select: {
@@ -194,6 +200,8 @@ export class HashedLinkRepository {
         expiresAt: true,
         maxUsageCount: true,
         usageCount: true,
+        bookingWindowStart: true,
+        bookingWindowEnd: true,
         eventTypeId: true,
         eventType: {
           select: {
@@ -212,9 +220,12 @@ export class HashedLinkRepository {
       },
       select: {
         id: true,
+        eventTypeId: true,
         expiresAt: true,
         maxUsageCount: true,
         usageCount: true,
+        bookingWindowStart: true,
+        bookingWindowEnd: true,
         eventType: {
           select: {
             userId: true,

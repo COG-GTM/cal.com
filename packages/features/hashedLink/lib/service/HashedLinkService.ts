@@ -3,14 +3,14 @@ import { ErrorCode } from "@calcom/lib/errorCodes";
 import { validateHashedLinkData } from "@calcom/lib/hashedLinksUtils";
 import logger from "@calcom/lib/logger";
 import { safeStringify } from "@calcom/lib/safeStringify";
-
-import { HashedLinkRepository } from "../repository/HashedLinkRepository";
-import { type HashedLinkInputType } from "../repository/HashedLinkRepository";
+import { type HashedLinkInputType, HashedLinkRepository } from "../repository/HashedLinkRepository";
 
 type NormalizedLink = {
   link: string;
   expiresAt: Date | null;
   maxUsageCount?: number | null;
+  bookingWindowStart?: Date | null;
+  bookingWindowEnd?: Date | null;
 };
 
 interface HashedLinkServiceDeps {
@@ -33,13 +33,26 @@ export class HashedLinkService {
    * @returns Normalized link object
    */
   private normalizeLinkInput(input: string | HashedLinkInputType): NormalizedLink {
-    return typeof input === "string"
-      ? { link: input, expiresAt: null }
-      : {
-          link: input.link,
-          expiresAt: input.expiresAt ?? null,
-          maxUsageCount: input.maxUsageCount,
-        };
+    if (typeof input === "string") {
+      return { link: input, expiresAt: null };
+    }
+
+    const bookingWindowStart = input.bookingWindowStart ?? null;
+    const bookingWindowEnd = input.bookingWindowEnd ?? null;
+    if ((bookingWindowStart === null) !== (bookingWindowEnd === null)) {
+      throw new Error("Booking window start and end must both be set or both be null");
+    }
+    if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
+      throw new Error("Booking window end must be after its start");
+    }
+
+    return {
+      link: input.link,
+      expiresAt: input.expiresAt ?? null,
+      maxUsageCount: input.maxUsageCount,
+      bookingWindowStart,
+      bookingWindowEnd,
+    };
   }
 
   /**

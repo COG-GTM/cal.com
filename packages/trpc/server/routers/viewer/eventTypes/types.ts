@@ -34,8 +34,36 @@ const hashedLinkInputSchema: z.ZodType<HashedLinkInput> = z
     expiresAt: z.date().nullish(),
     maxUsageCount: z.number().nullish(),
     usageCount: z.number().nullish(),
+    bookingWindowStart: z.date().nullish(),
+    bookingWindowEnd: z.date().nullish(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const hasStart = data.bookingWindowStart !== null && data.bookingWindowStart !== undefined;
+    const hasEnd = data.bookingWindowEnd !== null && data.bookingWindowEnd !== undefined;
+
+    if (hasStart !== hasEnd) {
+      let path = "bookingWindowStart";
+      if (hasStart) {
+        path = "bookingWindowEnd";
+      }
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Booking window start and end must both be set or both be null",
+        path: [path],
+      });
+      return;
+    }
+
+    const { bookingWindowStart, bookingWindowEnd } = data;
+    if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Booking window end must be after its start",
+        path: ["bookingWindowEnd"],
+      });
+    }
+  });
 
 const aiPhoneCallConfigSchema: z.ZodType<AiPhoneCallConfig | undefined> = z
   .object({

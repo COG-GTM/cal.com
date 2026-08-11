@@ -25,6 +25,7 @@ export type UseScheduleWithCacheArgs = {
   isTeamEvent?: boolean;
   orgSlug?: string;
   teamMemberEmail?: string | null;
+  hashedLink?: string | null;
   useApiV2?: boolean;
   enabled?: boolean;
   /***
@@ -63,6 +64,7 @@ export const useSchedule = ({
   isTeamEvent,
   orgSlug,
   teamMemberEmail,
+  hashedLink,
   useApiV2 = false,
   enabled: enabledProp = true,
   bookerLayout,
@@ -110,6 +112,7 @@ export const useSchedule = ({
     rescheduleUid,
     orgSlug,
     teamMemberEmail,
+    hashedLink,
     routedTeamMemberIds,
     skipContactOwner,
     ...(queuedFormResponseId ? { queuedFormResponseId } : { routingFormResponseId }),
@@ -141,7 +144,7 @@ export const useSchedule = ({
       enabledProp,
   };
 
-  const isCallingApiV2Slots = useApiV2 && Boolean(isTeamEvent) && options.enabled;
+  const isCallingApiV2Slots = useApiV2 && Boolean(isTeamEvent) && options.enabled && !hashedLink;
 
   // API V2 query for team events
   const teamScheduleV2 = useApiV2AvailableSlots({
