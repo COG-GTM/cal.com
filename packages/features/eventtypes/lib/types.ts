@@ -6,12 +6,7 @@ import type { ChildrenEventType } from "@calcom/features/eventtypes/lib/children
 import type { IntervalLimit } from "@calcom/lib/intervalLimits/intervalLimitSchema";
 import type { AttributesQueryValue } from "@calcom/lib/raqb/types";
 import type { EventTypeTranslation } from "@calcom/prisma/client";
-import type {
-  CancellationReasonRequirement,
-  MembershipRole,
-  PeriodType,
-  SchedulingType,
-} from "@calcom/prisma/enums";
+import type { CancellationReasonRequirement, MembershipRole, PeriodType, SchedulingType } from "@calcom/prisma/enums";
 import type {
   BookerLayoutSettings,
   CustomInputSchema,

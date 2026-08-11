@@ -1,5 +1,10 @@
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { useState } from "react";
+import { Controller, useFormContext } from "react-hook-form";
+
 import dayjs from "@calcom/dayjs";
-import type { EventTypeSetupProps, FormValues, PrivateLinkWithOptions } from "@calcom/features/eventtypes/lib/types";
+import type { EventTypeSetupProps } from "@calcom/features/eventtypes/lib/types";
+import type { FormValues, PrivateLinkWithOptions } from "@calcom/features/eventtypes/lib/types";
 import { generateHashedLink } from "@calcom/lib/generateHashedLink";
 import { isLinkExpired as utilsIsLinkExpired } from "@calcom/lib/hashedLinksUtils";
 import { useCopy } from "@calcom/lib/hooks/useCopy";
@@ -9,13 +14,13 @@ import classNames from "@calcom/ui/classNames";
 import { Badge } from "@calcom/ui/components/badge";
 import { Button } from "@calcom/ui/components/button";
 import { Dialog, DialogContent } from "@calcom/ui/components/dialog";
-import { DatePicker, NumberInput, TextField } from "@calcom/ui/components/form";
+import { TextField } from "@calcom/ui/components/form";
+import { DatePicker } from "@calcom/ui/components/form";
+import { NumberInput } from "@calcom/ui/components/form";
+import { SettingsToggle } from "@calcom/ui/components/form";
 import { RadioAreaGroup as RadioArea } from "@calcom/ui/components/radio";
 import { showToast } from "@calcom/ui/components/toast";
 import { Tooltip } from "@calcom/ui/components/tooltip";
-import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
 
 export const MultiplePrivateLinksController = ({
   team,
@@ -181,19 +186,6 @@ export const MultiplePrivateLinksController = ({
 
           const linkDataMap = new Map(allLinksData?.map((data: HashedLinkData) => [data.linkId, data]) || []);
 
-          const getLinkWithLatestData = (link: PrivateLinkWithOptions): PrivateLinkWithOptions => {
-            const latestLinkData = linkDataMap.get(link.link);
-            if (!latestLinkData) return link;
-
-            return {
-              ...link,
-              bookingWindowStart:
-                "bookingWindowStart" in link ? link.bookingWindowStart : latestLinkData.bookingWindowStart,
-              bookingWindowEnd:
-                "bookingWindowEnd" in link ? link.bookingWindowEnd : latestLinkData.bookingWindowEnd,
-            };
-          };
-
           const addPrivateLink = () => {
             const userId = formMethods.getValues("users")?.[0]?.id ?? team?.id;
             if (!userId) return;
@@ -320,13 +312,19 @@ export const MultiplePrivateLinksController = ({
               {sortedLinksWithIndex.map(({ val, originalIndex }, key) => {
                 const singleUseURL = `${bookerUrl}/d/${val.link}/${formMethods.getValues("slug")}`;
 
-                const linkWithLatestData = getLinkWithLatestData(val);
                 const latestLinkData = linkDataMap.get(val.link);
                 const latestUsageCount =
                   latestLinkData?.usageCount ?? ((val as PrivateLinkWithOptions).usageCount || 0);
+                const bookingWindowStart = latestLinkData?.bookingWindowStart ?? val.bookingWindowStart;
+                const bookingWindowEnd = latestLinkData?.bookingWindowEnd ?? val.bookingWindowEnd;
+                const linkForSettings = {
+                  ...val,
+                  bookingWindowStart,
+                  bookingWindowEnd,
+                };
 
-                const isExpired = isLinkExpired(linkWithLatestData);
-                const linkDescription = getLinkDescription(linkWithLatestData, latestUsageCount);
+                const isExpired = isLinkExpired(val);
+                const linkDescription = getLinkDescription(val, latestUsageCount);
 
                 return (
                   <li data-testid="add-single-use-link" className="mb-4 flex flex-col" key={val.link}>
@@ -381,7 +379,7 @@ export const MultiplePrivateLinksController = ({
                             variant="icon"
                             StartIcon="settings"
                             data-testid="private-link-settings"
-                            onClick={() => openSettingsDialog(originalIndex, linkWithLatestData)}
+                            onClick={() => openSettingsDialog(originalIndex, linkForSettings)}
                           />
                         )}
                         <Button
@@ -397,15 +395,15 @@ export const MultiplePrivateLinksController = ({
                     </div>
                     <div data-testid="private-link-description" className="mt-1 text-sm text-gray-500">
                       {linkDescription}
-                      {linkWithLatestData.bookingWindowStart && linkWithLatestData.bookingWindowEnd && (
+                      {bookingWindowStart && bookingWindowEnd && (
                         <div>
                           {t("booking_window_description", {
                             start: dayjs
-                              .utc(linkWithLatestData.bookingWindowStart)
+                              .utc(bookingWindowStart)
                               .tz(userTimeZone || "UTC")
                               .format("MMM DD, HH:mm"),
                             end: dayjs
-                              .utc(linkWithLatestData.bookingWindowEnd)
+                              .utc(bookingWindowEnd)
                               .tz(userTimeZone || "UTC")
                               .format("MMM DD, HH:mm"),
                           })}
@@ -492,17 +490,13 @@ export const MultiplePrivateLinksController = ({
           </div>
 
           <div className="border-subtle mb-4 border-t pt-4">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={bookingWindowEnabled}
-                onChange={(event) => setBookingWindowEnabled(event.target.checked)}
-              />
-              {t("booking_window")}
-            </label>
-            <p className="mt-1 text-sm text-gray-500">{t("booking_window_description_generic")}</p>
-            {bookingWindowEnabled && (
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SettingsToggle
+              title={t("booking_window")}
+              description={<span className="text-subtle">{t("booking_window_description_generic")}</span>}
+              checked={bookingWindowEnabled}
+              onCheckedChange={setBookingWindowEnabled}
+              data-testid="private-link-booking-window-toggle">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <DatePicker date={bookingWindowDate} onDatesChange={setBookingWindowDate} />
                 <TextField
                   type="time"
@@ -517,7 +511,7 @@ export const MultiplePrivateLinksController = ({
                   onChange={(event) => setBookingWindowEnd(event.target.value)}
                 />
               </div>
-            )}
+            </SettingsToggle>
           </div>
 
           <div className="mb-4 mt-4 flex justify-end">

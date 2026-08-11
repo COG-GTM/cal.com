@@ -1,4 +1,4 @@
-import type { HashedLinkService } from "@calcom/features/hashedLink/lib/service/HashedLinkService";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import { describe, expect, it, vi } from "vitest";
 import { validateBookingTimeIsWithinHashedLinkWindow } from "../validateBookingTimeIsWithinHashedLinkWindow";
 
@@ -9,10 +9,10 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
     bookingWindowEnd: new Date("2026-08-20T14:00:00.000Z"),
   };
 
-  const getService = (): HashedLinkService =>
+  const getRepository = (): HashedLinkRepository =>
     ({
-      validate: vi.fn().mockResolvedValue(bookingWindow),
-    }) as unknown as HashedLinkService;
+      findLinkWithValidationData: vi.fn().mockResolvedValue(bookingWindow),
+    }) as unknown as HashedLinkRepository;
 
   it("accepts a booking fully inside the window", async () => {
     await expect(
@@ -21,7 +21,7 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         eventTypeId: 1,
         reqBodyStart: "2026-08-20T09:00:00.000Z",
         reqBodyEnd: "2026-08-20T10:00:00.000Z",
-        hashedLinkService: getService(),
+        hashedLinkRepository: getRepository(),
       })
     ).resolves.toBeUndefined();
   });
@@ -33,7 +33,7 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         eventTypeId: 1,
         reqBodyStart: "2026-08-20T13:30:00.000Z",
         reqBodyEnd: "2026-08-20T14:30:00.000Z",
-        hashedLinkService: getService(),
+        hashedLinkRepository: getRepository(),
       })
     ).rejects.toThrow("outside the private link's bookable window");
   });
@@ -45,19 +45,19 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         eventTypeId: 2,
         reqBodyStart: "2026-08-20T09:00:00.000Z",
         reqBodyEnd: "2026-08-20T10:00:00.000Z",
-        hashedLinkService: getService(),
+        hashedLinkRepository: getRepository(),
       })
     ).rejects.toThrow("does not belong to this event type");
   });
 
   it("accepts any time for a link without a window", async () => {
-    const service = {
-      validate: vi.fn().mockResolvedValue({
+    const repository = {
+      findLinkWithValidationData: vi.fn().mockResolvedValue({
         eventTypeId: 1,
         bookingWindowStart: null,
         bookingWindowEnd: null,
       }),
-    } as unknown as HashedLinkService;
+    } as unknown as HashedLinkRepository;
 
     await expect(
       validateBookingTimeIsWithinHashedLinkWindow({
@@ -65,7 +65,7 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         eventTypeId: 1,
         reqBodyStart: "2026-08-20T15:00:00.000Z",
         reqBodyEnd: "2026-08-20T16:00:00.000Z",
-        hashedLinkService: service,
+        hashedLinkRepository: repository,
       })
     ).resolves.toBeUndefined();
   });

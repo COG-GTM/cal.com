@@ -189,6 +189,58 @@ describe("getSchedule", () => {
       expect(result).toHaveDateDisabled({ dateString: "2025-06-03" });
     });
 
+    test("should filter getSchedule slots by a hashed link booking window", async () => {
+      await setupTeamAndFeatures();
+      vi.setSystemTime("2025-06-01T23:30:00Z");
+
+      await createBookingScenario(getBaseScenarioData());
+      await prismock.hashedLink.create({
+        data: {
+          id: 1,
+          link: "windowed-link",
+          eventTypeId: 1,
+          expiresAt: null,
+          maxUsageCount: 1,
+          usageCount: 0,
+          bookingWindowStart: new Date("2025-06-02T06:00:00.000Z"),
+          bookingWindowEnd: new Date("2025-06-02T09:00:00.000Z"),
+        },
+      });
+
+      const input = {
+        eventTypeId: 1,
+        eventTypeSlug: "",
+        startTime: "2025-06-02T00:00:00.000Z",
+        endTime: "2025-06-02T23:59:59.999Z",
+        timeZone: "Asia/Kolkata",
+        isTeamEvent: true,
+        orgSlug: null,
+      } satisfies z.infer<typeof getScheduleSchema>;
+
+      const windowedResult = await availableSlotsService.getAvailableSlots({
+        input: { ...input, hashedLink: "windowed-link" },
+      });
+      const publicResult = await availableSlotsService.getAvailableSlots({ input });
+
+      expect(windowedResult).toHaveTimeSlots(
+        ["2025-06-02T06:30:00.000Z", "2025-06-02T07:30:00.000Z"],
+        { dateString: "2025-06-02", doExactMatch: true }
+      );
+      expect(publicResult).toHaveTimeSlots(
+        [
+          "2025-06-02T04:30:00.000Z",
+          "2025-06-02T05:30:00.000Z",
+          "2025-06-02T06:30:00.000Z",
+          "2025-06-02T07:30:00.000Z",
+          "2025-06-02T08:30:00.000Z",
+          "2025-06-02T09:30:00.000Z",
+          "2025-06-02T10:30:00.000Z",
+          "2025-06-02T11:30:00.000Z",
+        ],
+        { dateString: "2025-06-02", doExactMatch: true }
+      );
+    });
+
     test("should respect recurring rule in restrictionSchedule (Europe/London, useBookerTimezone=false)", async () => {
       await setupTeamAndFeatures();
       vi.setSystemTime("2025-06-01T23:30:00Z");

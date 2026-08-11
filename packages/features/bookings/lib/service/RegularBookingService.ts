@@ -56,6 +56,7 @@ import { getEventName, updateHostInEventName } from "@calcom/features/eventtypes
 import type { FeaturesRepository } from "@calcom/features/flags/features.repository";
 import { getFullName } from "@calcom/features/form-builder/utils";
 import type { HashedLinkService } from "@calcom/features/hashedLink/lib/service/HashedLinkService";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import { ProfileRepository } from "@calcom/features/profile/repositories/ProfileRepository";
 import { getRoutingTraceService } from "@calcom/features/routing-trace/di/RoutingTraceService.container";
 import { handleAnalyticsEvents } from "@calcom/features/tasker/tasks/analytics/handleAnalyticsEvents";
@@ -460,6 +461,7 @@ export interface IBookingServiceDependencies {
   luckyUserService: LuckyUserService;
   userRepository: UserRepository;
   hashedLinkService: HashedLinkService;
+  hashedLinkRepository: HashedLinkRepository;
   bookingEmailAndSmsTasker: BookingEmailAndSmsTasker;
   featuresRepository: FeaturesRepository;
   bookingEventHandler: BookingEventHandlerService;
@@ -850,7 +852,7 @@ async function handler(
       eventTypeId,
       reqBodyStart: reqBody.start,
       reqBodyEnd: reqBody.end,
-      hashedLinkService: deps.hashedLinkService,
+      hashedLinkRepository: deps.hashedLinkRepository,
     });
   }
 

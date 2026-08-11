@@ -1,4 +1,4 @@
-import type { HashedLinkService } from "@calcom/features/hashedLink/lib/service/HashedLinkService";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import { HttpError } from "@calcom/lib/http-error";
 
 type Props = {
@@ -6,7 +6,7 @@ type Props = {
   eventTypeId: number;
   reqBodyStart: string;
   reqBodyEnd: string;
-  hashedLinkService: HashedLinkService;
+  hashedLinkRepository: HashedLinkRepository;
 };
 
 export const validateBookingTimeIsWithinHashedLinkWindow = async ({
@@ -14,11 +14,11 @@ export const validateBookingTimeIsWithinHashedLinkWindow = async ({
   eventTypeId,
   reqBodyStart,
   reqBodyEnd,
-  hashedLinkService,
+  hashedLinkRepository,
 }: Props): Promise<void> => {
-  const link = await hashedLinkService.validate(hashedLink);
+  const link = await hashedLinkRepository.findLinkWithValidationData(hashedLink);
 
-  if (link.eventTypeId !== eventTypeId) {
+  if (!link || link.eventTypeId !== eventTypeId) {
     throw new HttpError({
       statusCode: 400,
       message: "The private link does not belong to this event type",
