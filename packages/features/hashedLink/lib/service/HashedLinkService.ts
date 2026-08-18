@@ -1,5 +1,6 @@
 import { MembershipService } from "@calcom/features/membership/services/membershipService";
 import { ErrorCode } from "@calcom/lib/errorCodes";
+import { ErrorWithCode } from "@calcom/lib/errors";
 import { validateHashedLinkData } from "@calcom/lib/hashedLinksUtils";
 import logger from "@calcom/lib/logger";
 import { safeStringify } from "@calcom/lib/safeStringify";
@@ -37,21 +38,31 @@ export class HashedLinkService {
       return { link: input, expiresAt: null };
     }
 
-    const bookingWindowStart = input.bookingWindowStart ?? null;
-    const bookingWindowEnd = input.bookingWindowEnd ?? null;
-    if ((bookingWindowStart === null) !== (bookingWindowEnd === null)) {
-      throw new Error("Booking window start and end must both be set or both be null");
+    const { bookingWindowStart, bookingWindowEnd } = input;
+    if ((bookingWindowStart === undefined) !== (bookingWindowEnd === undefined)) {
+      throw new ErrorWithCode(
+        ErrorCode.InvalidBookingWindow,
+        "Booking window start and end must both be set or both be null"
+      );
     }
-    if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
-      throw new Error("Booking window end must be after its start");
+    if (bookingWindowStart !== undefined && bookingWindowEnd !== undefined) {
+      if ((bookingWindowStart === null) !== (bookingWindowEnd === null)) {
+        throw new ErrorWithCode(
+          ErrorCode.InvalidBookingWindow,
+          "Booking window start and end must both be set or both be null"
+        );
+      }
+      if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
+        throw new ErrorWithCode(ErrorCode.InvalidBookingWindow, "Booking window end must be after its start");
+      }
     }
 
     return {
       link: input.link,
       expiresAt: input.expiresAt ?? null,
       maxUsageCount: input.maxUsageCount,
-      bookingWindowStart,
-      bookingWindowEnd,
+      bookingWindowStart: bookingWindowStart,
+      bookingWindowEnd: bookingWindowEnd,
     };
   }
 

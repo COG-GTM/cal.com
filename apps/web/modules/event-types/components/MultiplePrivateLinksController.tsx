@@ -88,8 +88,8 @@ export const MultiplePrivateLinksController = ({
     });
   };
 
-  const updateBookingWindow = (index: number | null) => {
-    if (index === null) return;
+  const updateBookingWindow = (index: number | null): boolean => {
+    if (index === null) return false;
 
     const currentValue = formMethods.getValues("multiplePrivateLinks") || [];
     const convertedValue = currentValue.map((val: string | PrivateLinkWithOptions) =>
@@ -110,7 +110,7 @@ export const MultiplePrivateLinksController = ({
 
       if (!start.isValid() || !end.isValid() || !end.isAfter(start)) {
         showToast(t("booking_window_end_must_be_after_start"), "error");
-        return;
+        return false;
       }
 
       convertedValue[index] = {
@@ -125,6 +125,7 @@ export const MultiplePrivateLinksController = ({
       shouldTouch: true,
       shouldValidate: true,
     });
+    return true;
   };
 
   const openSettingsDialog = (index: number, currentLink: PrivateLinkWithOptions) => {
@@ -146,6 +147,10 @@ export const MultiplePrivateLinksController = ({
       setBookingWindowDate(start.toDate());
       setBookingWindowStart(start.format("HH:mm"));
       setBookingWindowEnd(end.format("HH:mm"));
+    } else {
+      setBookingWindowDate(new Date());
+      setBookingWindowStart("09:00");
+      setBookingWindowEnd("17:00");
     }
     setIsDialogOpen(true);
   };
@@ -520,13 +525,15 @@ export const MultiplePrivateLinksController = ({
               color="primary"
               data-testid="private-link-expiration-settings-save"
               onClick={() => {
-                // Save the changes when Save button is clicked
+                if (!updateBookingWindow(currentLinkIndex)) {
+                  return;
+                }
+
                 if (selectedType === "time") {
                   updateLinkSettings(currentLinkIndex, "time", expiryDate);
                 } else {
                   updateLinkSettings(currentLinkIndex, "usage", undefined, maxUsageCount);
                 }
-                updateBookingWindow(currentLinkIndex);
                 setIsDialogOpen(false);
               }}>
               {t("save")}

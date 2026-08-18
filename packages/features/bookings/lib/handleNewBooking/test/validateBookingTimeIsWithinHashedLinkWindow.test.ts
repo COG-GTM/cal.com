@@ -1,4 +1,5 @@
 import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
+import { ErrorCode } from "@calcom/lib/errorCodes";
 import { describe, expect, it, vi } from "vitest";
 import { validateBookingTimeIsWithinHashedLinkWindow } from "../validateBookingTimeIsWithinHashedLinkWindow";
 
@@ -35,7 +36,7 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         reqBodyEnd: "2026-08-20T14:30:00.000Z",
         hashedLinkRepository: getRepository(),
       })
-    ).rejects.toThrow("outside the private link's bookable window");
+    ).rejects.toThrow(ErrorCode.BookingTimeOutsidePrivateLinkWindow);
   });
 
   it("rejects a link belonging to another event type", async () => {
@@ -47,7 +48,7 @@ describe("validateBookingTimeIsWithinHashedLinkWindow", () => {
         reqBodyEnd: "2026-08-20T10:00:00.000Z",
         hashedLinkRepository: getRepository(),
       })
-    ).rejects.toThrow("does not belong to this event type");
+    ).rejects.toThrow(ErrorCode.PrivateLinkWrongEventType);
   });
 
   it("accepts any time for a link without a window", async () => {

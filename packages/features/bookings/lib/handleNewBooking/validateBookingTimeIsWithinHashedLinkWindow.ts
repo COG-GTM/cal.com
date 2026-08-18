@@ -1,4 +1,5 @@
 import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
+import { ErrorCode } from "@calcom/lib/errorCodes";
 import { HttpError } from "@calcom/lib/http-error";
 
 type Props = {
@@ -21,7 +22,7 @@ export const validateBookingTimeIsWithinHashedLinkWindow = async ({
   if (!link || link.eventTypeId !== eventTypeId) {
     throw new HttpError({
       statusCode: 400,
-      message: "The private link does not belong to this event type",
+      message: ErrorCode.PrivateLinkWrongEventType,
     });
   }
 
@@ -36,7 +37,7 @@ export const validateBookingTimeIsWithinHashedLinkWindow = async ({
   if (!isWithinWindow) {
     throw new HttpError({
       statusCode: 400,
-      message: "The booking time is outside the private link's bookable window",
+      message: ErrorCode.BookingTimeOutsidePrivateLinkWindow,
     });
   }
 };

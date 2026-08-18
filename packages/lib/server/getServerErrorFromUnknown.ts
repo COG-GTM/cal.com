@@ -148,7 +148,10 @@ export function getHttpStatusCode(cause: Error | ErrorWithCode): number {
     case ErrorCode.AvailabilityNotFoundInSchedule:
     case ErrorCode.CancelledBookingsCannotBeRescheduled:
     case ErrorCode.BookingTimeOutOfBounds:
+    case ErrorCode.BookingTimeOutsidePrivateLinkWindow:
     case ErrorCode.BookingNotAllowedByRestrictionSchedule:
+    case ErrorCode.InvalidBookingWindow:
+    case ErrorCode.PrivateLinkWrongEventType:
     case ErrorCode.BookerLimitExceeded:
     case ErrorCode.BookerLimitExceededReschedule:
     case ErrorCode.EventTypeNoHosts:

@@ -20,6 +20,7 @@ import type { TeamRepository } from "@calcom/features/ee/teams/repositories/Team
 import { getDefaultEvent } from "@calcom/features/eventtypes/lib/defaultEvents";
 import type { EventTypeRepository } from "@calcom/features/eventtypes/repositories/eventTypeRepository";
 import type { FeaturesRepository } from "@calcom/features/flags/features.repository";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import type { PrismaOOORepository } from "@calcom/features/ooo/repositories/PrismaOOORepository";
 import type { IRedisService } from "@calcom/features/redis/IRedisService";
 import { buildDateRanges } from "@calcom/features/schedules/lib/date-ranges";
@@ -27,7 +28,6 @@ import getSlots from "@calcom/features/schedules/lib/slots";
 import type { ScheduleRepository } from "@calcom/features/schedules/repositories/ScheduleRepository";
 import type { ISelectedSlotRepository } from "@calcom/features/selectedSlots/repositories/ISelectedSlotRepository";
 import type { NoSlotsNotificationService } from "@calcom/features/slots/handleNotificationWhenNoSlots";
-import { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import type { UserRepository } from "@calcom/features/users/repositories/UserRepository";
 import { withSelectedCalendars } from "@calcom/features/users/repositories/UserRepository";
 import { filterBlockedHosts } from "@calcom/features/watchlist/operations/filter-blocked-hosts.controller";
@@ -48,7 +48,6 @@ import {
 } from "@calcom/lib/isOutOfBounds";
 import logger from "@calcom/lib/logger";
 import { safeStringify } from "@calcom/lib/safeStringify";
-import { validateHashedLinkData } from "@calcom/lib/hashedLinksUtils";
 import { withReporting } from "@calcom/lib/sentryWrapper";
 import type { RoutingFormResponseRepository } from "@calcom/features/routing-forms/repositories/RoutingFormResponseRepository";
 import { PeriodType, SchedulingType } from "@calcom/prisma/enums";
@@ -91,6 +90,7 @@ export interface IAvailableSlotsService {
   qualifiedHostsService: QualifiedHostsService;
   noSlotsNotificationService: NoSlotsNotificationService;
   orgMembershipLookup: OrgMembershipLookup;
+  hashedLinkRepository: HashedLinkRepository;
 }
 
 function withSlotsCache(
@@ -1162,18 +1162,13 @@ export class AvailableSlotsService {
     let privateLinkWindow: { start: Date; end: Date } | null = null;
     let privateLinkIsInvalid = false;
     if (input.hashedLink) {
-      const hashedLink = await HashedLinkRepository.create().findLinkWithValidationData(input.hashedLink);
+      const hashedLink = await this.dependencies.hashedLinkRepository.findLinkWithValidationData(input.hashedLink);
       if (!hashedLink) {
         privateLinkIsInvalid = true;
       } else {
-        try {
-          validateHashedLinkData(hashedLink);
-          const result = getPrivateLinkBookingWindow(hashedLink, eventType.id);
-          privateLinkIsInvalid = result.isInvalid;
-          privateLinkWindow = result.window;
-        } catch {
-          privateLinkIsInvalid = true;
-        }
+        const result = getPrivateLinkBookingWindow(hashedLink, eventType.id);
+        privateLinkIsInvalid = result.isInvalid;
+        privateLinkWindow = result.window;
       }
     }
 

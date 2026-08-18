@@ -119,11 +119,17 @@ export class HashedLinkRepository {
   }
 
   async updateLink(eventTypeId: number, linkData: HashedLinkInputType) {
-    const updateData: Prisma.HashedLinkUpdateManyMutationInput = {
-      expiresAt: linkData.expiresAt,
-      bookingWindowStart: linkData.bookingWindowStart,
-      bookingWindowEnd: linkData.bookingWindowEnd,
-    };
+    const updateData: Prisma.HashedLinkUpdateManyMutationInput = {};
+
+    if (linkData.expiresAt !== undefined) {
+      updateData.expiresAt = linkData.expiresAt;
+    }
+    if (linkData.bookingWindowStart !== undefined) {
+      updateData.bookingWindowStart = linkData.bookingWindowStart;
+    }
+    if (linkData.bookingWindowEnd !== undefined) {
+      updateData.bookingWindowEnd = linkData.bookingWindowEnd;
+    }
 
     if (typeof linkData.maxUsageCount === "number" && linkData.maxUsageCount !== null) {
       updateData.maxUsageCount = linkData.maxUsageCount;
