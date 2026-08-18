@@ -69,6 +69,7 @@ export const useScheduleForEvent = ({
   selectedDate,
   orgSlug,
   teamMemberEmail,
+  hashedLink,
   isTeamEvent,
   useApiV2 = true,
   bookerLayout,
@@ -83,6 +84,7 @@ export const useScheduleForEvent = ({
   selectedDate?: string | null;
   orgSlug?: string;
   teamMemberEmail?: string | null;
+  hashedLink?: string | null;
   fromRedirectOfNonOrgLink?: boolean;
   isTeamEvent?: boolean;
   useApiV2?: boolean;
@@ -120,6 +122,7 @@ export const useScheduleForEvent = ({
     isTeamEvent,
     orgSlug,
     teamMemberEmail,
+    hashedLink,
     useApiV2: useApiV2,
     bookerLayout,
   });

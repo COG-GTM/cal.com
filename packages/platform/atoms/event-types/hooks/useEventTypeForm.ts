@@ -75,6 +75,8 @@ export const useEventTypeForm = ({
         link: link.link,
         expiresAt: link.expiresAt,
         maxUsageCount: link.maxUsageCount,
+        bookingWindowStart: link.bookingWindowStart,
+        bookingWindowEnd: link.bookingWindowEnd,
       })),
       eventTypeColor: eventType.eventTypeColor || null,
       periodDates: {

@@ -25,6 +25,8 @@ const hashedLinkSelect = {
     expiresAt: true,
     maxUsageCount: true,
     usageCount: true,
+    bookingWindowStart: true,
+    bookingWindowEnd: true,
   },
 };
 

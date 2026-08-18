@@ -33,6 +33,7 @@ import type { CheckBookingAndDurationLimitsService } from "@calcom/features/book
 import { handlePayment } from "@calcom/features/bookings/lib/handlePayment";
 import { handleWebhookTrigger } from "@calcom/features/bookings/lib/handleWebhookTrigger";
 import { isEventTypeLoggingEnabled } from "@calcom/features/bookings/lib/isEventTypeLoggingEnabled";
+import { validateBookingTimeIsWithinHashedLinkWindow } from "@calcom/features/bookings/lib/handleNewBooking/validateBookingTimeIsWithinHashedLinkWindow";
 import type { BookingEventHandlerService } from "@calcom/features/bookings/lib/onBookingEvents/BookingEventHandlerService";
 import type { BookingRescheduledPayload } from "@calcom/features/bookings/lib/onBookingEvents/types.d";
 import type { BookingEmailAndSmsTasker } from "@calcom/features/bookings/lib/tasker/BookingEmailAndSmsTasker";
@@ -55,6 +56,7 @@ import { getEventName, updateHostInEventName } from "@calcom/features/eventtypes
 import type { FeaturesRepository } from "@calcom/features/flags/features.repository";
 import { getFullName } from "@calcom/features/form-builder/utils";
 import type { HashedLinkService } from "@calcom/features/hashedLink/lib/service/HashedLinkService";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import { ProfileRepository } from "@calcom/features/profile/repositories/ProfileRepository";
 import { getRoutingTraceService } from "@calcom/features/routing-trace/di/RoutingTraceService.container";
 import { handleAnalyticsEvents } from "@calcom/features/tasker/tasks/analytics/handleAnalyticsEvents";
@@ -459,6 +461,7 @@ export interface IBookingServiceDependencies {
   luckyUserService: LuckyUserService;
   userRepository: UserRepository;
   hashedLinkService: HashedLinkService;
+  hashedLinkRepository: HashedLinkRepository;
   bookingEmailAndSmsTasker: BookingEmailAndSmsTasker;
   featuresRepository: FeaturesRepository;
   bookingEventHandler: BookingEventHandlerService;
@@ -842,6 +845,16 @@ async function handler(
     eventTimeZone,
     tracingLogger
   );
+
+  if (reqBody.hashedLink) {
+    await validateBookingTimeIsWithinHashedLinkWindow({
+      hashedLink: reqBody.hashedLink,
+      eventTypeId,
+      reqBodyStart: reqBody.start,
+      reqBodyEnd: reqBody.end,
+      hashedLinkRepository: deps.hashedLinkRepository,
+    });
+  }
 
   validateEventLength({
     reqBodyStart: reqBody.start,

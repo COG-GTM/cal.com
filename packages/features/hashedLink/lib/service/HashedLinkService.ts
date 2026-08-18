@@ -1,16 +1,17 @@
 import { MembershipService } from "@calcom/features/membership/services/membershipService";
 import { ErrorCode } from "@calcom/lib/errorCodes";
+import { ErrorWithCode } from "@calcom/lib/errors";
 import { validateHashedLinkData } from "@calcom/lib/hashedLinksUtils";
 import logger from "@calcom/lib/logger";
 import { safeStringify } from "@calcom/lib/safeStringify";
-
-import { HashedLinkRepository } from "../repository/HashedLinkRepository";
-import { type HashedLinkInputType } from "../repository/HashedLinkRepository";
+import { type HashedLinkInputType, HashedLinkRepository } from "../repository/HashedLinkRepository";
 
 type NormalizedLink = {
   link: string;
   expiresAt: Date | null;
   maxUsageCount?: number | null;
+  bookingWindowStart?: Date | null;
+  bookingWindowEnd?: Date | null;
 };
 
 interface HashedLinkServiceDeps {
@@ -33,13 +34,32 @@ export class HashedLinkService {
    * @returns Normalized link object
    */
   private normalizeLinkInput(input: string | HashedLinkInputType): NormalizedLink {
-    return typeof input === "string"
-      ? { link: input, expiresAt: null }
-      : {
-          link: input.link,
-          expiresAt: input.expiresAt ?? null,
-          maxUsageCount: input.maxUsageCount,
-        };
+    if (typeof input === "string") {
+      return { link: input, expiresAt: null };
+    }
+
+    const { bookingWindowStart, bookingWindowEnd } = input;
+    // undefined leaves the persisted window untouched, null clears it
+    const windowIsOmitted = bookingWindowStart === undefined && bookingWindowEnd === undefined;
+    const windowIsCleared = bookingWindowStart === null && bookingWindowEnd === null;
+    const windowIsSet = !!bookingWindowStart && !!bookingWindowEnd;
+    if (!windowIsOmitted && !windowIsCleared && !windowIsSet) {
+      throw new ErrorWithCode(
+        ErrorCode.InvalidBookingWindow,
+        "Booking window start and end must both be set or both be null"
+      );
+    }
+    if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
+      throw new ErrorWithCode(ErrorCode.InvalidBookingWindow, "Booking window end must be after its start");
+    }
+
+    return {
+      link: input.link,
+      expiresAt: input.expiresAt ?? null,
+      maxUsageCount: input.maxUsageCount,
+      bookingWindowStart,
+      bookingWindowEnd,
+    };
   }
 
   /**

@@ -1,6 +1,5 @@
 import type { IAvailableSlotsService } from "@calcom/trpc/server/routers/viewer/slots/util";
 import { AvailableSlotsService } from "@calcom/trpc/server/routers/viewer/slots/util";
-
 import { createModule } from "../di";
 import { DI_TOKENS } from "../tokens";
 
@@ -22,4 +21,5 @@ availableSlotsModule.bind(DI_TOKENS.AVAILABLE_SLOTS_SERVICE).toClass(AvailableSl
   qualifiedHostsService: DI_TOKENS.QUALIFIED_HOSTS_SERVICE,
   noSlotsNotificationService: DI_TOKENS.NO_SLOTS_NOTIFICATION_SERVICE,
   orgMembershipLookup: DI_TOKENS.ORG_MEMBERSHIP_LOOKUP,
+  hashedLinkRepository: DI_TOKENS.HASHED_LINK_REPOSITORY,
 } satisfies Record<keyof IAvailableSlotsService, symbol>);

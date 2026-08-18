@@ -20,6 +20,7 @@ import type { TeamRepository } from "@calcom/features/ee/teams/repositories/Team
 import { getDefaultEvent } from "@calcom/features/eventtypes/lib/defaultEvents";
 import type { EventTypeRepository } from "@calcom/features/eventtypes/repositories/eventTypeRepository";
 import type { FeaturesRepository } from "@calcom/features/flags/features.repository";
+import type { HashedLinkRepository } from "@calcom/features/hashedLink/lib/repository/HashedLinkRepository";
 import type { PrismaOOORepository } from "@calcom/features/ooo/repositories/PrismaOOORepository";
 import type { IRedisService } from "@calcom/features/redis/IRedisService";
 import { buildDateRanges } from "@calcom/features/schedules/lib/date-ranges";
@@ -59,6 +60,7 @@ import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 import type { GetScheduleOptions } from "./types";
 import type { OrgMembershipLookup } from "@calcom/features/di/modules/OrgMembershipLookup";
 import type { IGetAvailableSlots } from "@calcom/features/bookings/Booker/hooks/useAvailableTimeSlots";
+import { filterSlotsByBookingWindow, getPrivateLinkBookingWindow } from "./bookingWindow";
 
 const log = logger.getSubLogger({ prefix: ["[slots/util]"] });
 const DEFAULT_SLOTS_CACHE_TTL = 2000;
@@ -88,6 +90,7 @@ export interface IAvailableSlotsService {
   qualifiedHostsService: QualifiedHostsService;
   noSlotsNotificationService: NoSlotsNotificationService;
   orgMembershipLookup: OrgMembershipLookup;
+  hashedLinkRepository: HashedLinkRepository;
 }
 
 function withSlotsCache(
@@ -1156,6 +1159,19 @@ export class AvailableSlotsService {
       throw new TRPCError({ code: "NOT_FOUND" });
     }
 
+    let privateLinkWindow: { start: Date; end: Date } | null = null;
+    let privateLinkIsInvalid = false;
+    if (input.hashedLink) {
+      const hashedLink = await this.dependencies.hashedLinkRepository.findLinkWithValidationData(input.hashedLink);
+      if (!hashedLink) {
+        privateLinkIsInvalid = true;
+      } else {
+        const result = getPrivateLinkBookingWindow(hashedLink, eventType.id);
+        privateLinkIsInvalid = result.isInvalid;
+        privateLinkWindow = result.window;
+      }
+    }
+
     // Use "slots" mode to enable cache when available for getting calendar availability
     const mode: CalendarFetchMode = "slots";
     if (isEventTypeLoggingEnabled({ eventTypeId: eventType.id })) {
@@ -1417,6 +1433,16 @@ export class AvailableSlotsService {
       }
     } else {
       availableTimeSlots = timeSlots;
+    }
+
+    if (privateLinkIsInvalid) {
+      availableTimeSlots = [];
+    } else if (privateLinkWindow) {
+      availableTimeSlots = filterSlotsByBookingWindow(
+        availableTimeSlots,
+        privateLinkWindow,
+        input.duration || eventType.length
+      );
     }
 
     const reservedSlots = await this._getReservedSlotsAndCleanupExpired({

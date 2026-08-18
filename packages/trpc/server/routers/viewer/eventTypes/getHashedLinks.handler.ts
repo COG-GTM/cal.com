@@ -40,6 +40,8 @@ export const getHashedLinksHandler = async ({ ctx, input }: GetHashedLinksOption
         expiresAt: link.expiresAt,
         maxUsageCount: link.maxUsageCount,
         usageCount: link.usageCount,
+        bookingWindowStart: link.bookingWindowStart,
+        bookingWindowEnd: link.bookingWindowEnd,
       };
     })
   );

@@ -10,6 +10,7 @@ import { moduleLoader as userRepositoryModuleLoader } from "@calcom/features/di/
 import { DI_TOKENS } from "@calcom/features/di/tokens";
 import { moduleLoader as webhookProducerModuleLoader } from "@calcom/features/di/webhooks/modules/WebhookProducerService.module";
 import { moduleLoader as hashedLinkServiceModuleLoader } from "@calcom/features/hashedLink/di/HashedLinkService.module";
+import { moduleLoader as hashedLinkRepositoryModuleLoader } from "@calcom/features/hashedLink/di/HashedLinkRepository.module";
 import { moduleLoader as bookingEmailAndSmsTaskerModuleLoader } from "./tasker/BookingEmailAndSmsTasker.module";
 
 const thisModule = createModule();
@@ -28,6 +29,7 @@ const loadModule = bindModuleToClassOnToken({
     luckyUserService: luckyUserServiceModuleLoader,
     userRepository: userRepositoryModuleLoader,
     hashedLinkService: hashedLinkServiceModuleLoader,
+    hashedLinkRepository: hashedLinkRepositoryModuleLoader,
     bookingEmailAndSmsTasker: bookingEmailAndSmsTaskerModuleLoader,
     featuresRepository: featuresRepositoryModuleLoader,
     bookingEventHandler: bookingEventHandlerModuleLoader,

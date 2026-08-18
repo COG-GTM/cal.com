@@ -94,6 +94,8 @@ export type PrivateLinkWithOptions = {
   expiresAt?: Date | null;
   maxUsageCount?: number | null;
   usageCount?: number;
+  bookingWindowStart?: Date | null;
+  bookingWindowEnd?: Date | null;
 };
 
 export type FormValues = {
@@ -242,6 +244,8 @@ export type HashedLinkInput = {
   expiresAt?: Date | null;
   maxUsageCount?: number | null;
   usageCount?: number | null;
+  bookingWindowStart?: Date | null;
+  bookingWindowEnd?: Date | null;
 };
 
 export type AiPhoneCallConfig = {
