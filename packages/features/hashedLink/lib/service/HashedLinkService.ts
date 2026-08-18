@@ -39,30 +39,26 @@ export class HashedLinkService {
     }
 
     const { bookingWindowStart, bookingWindowEnd } = input;
-    if ((bookingWindowStart === undefined) !== (bookingWindowEnd === undefined)) {
+    // undefined leaves the persisted window untouched, null clears it
+    const windowIsOmitted = bookingWindowStart === undefined && bookingWindowEnd === undefined;
+    const windowIsCleared = bookingWindowStart === null && bookingWindowEnd === null;
+    const windowIsSet = !!bookingWindowStart && !!bookingWindowEnd;
+    if (!windowIsOmitted && !windowIsCleared && !windowIsSet) {
       throw new ErrorWithCode(
         ErrorCode.InvalidBookingWindow,
         "Booking window start and end must both be set or both be null"
       );
     }
-    if (bookingWindowStart !== undefined && bookingWindowEnd !== undefined) {
-      if ((bookingWindowStart === null) !== (bookingWindowEnd === null)) {
-        throw new ErrorWithCode(
-          ErrorCode.InvalidBookingWindow,
-          "Booking window start and end must both be set or both be null"
-        );
-      }
-      if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
-        throw new ErrorWithCode(ErrorCode.InvalidBookingWindow, "Booking window end must be after its start");
-      }
+    if (bookingWindowStart && bookingWindowEnd && bookingWindowEnd <= bookingWindowStart) {
+      throw new ErrorWithCode(ErrorCode.InvalidBookingWindow, "Booking window end must be after its start");
     }
 
     return {
       link: input.link,
       expiresAt: input.expiresAt ?? null,
       maxUsageCount: input.maxUsageCount,
-      bookingWindowStart: bookingWindowStart,
-      bookingWindowEnd: bookingWindowEnd,
+      bookingWindowStart,
+      bookingWindowEnd,
     };
   }
 
