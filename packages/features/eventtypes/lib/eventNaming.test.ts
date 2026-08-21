@@ -605,6 +605,20 @@ describe("event tests", () => {
       ).toBe("Ada Lovelace");
     });
 
+    it("formats a name booking field without a last name", () => {
+      expect(
+        event.getEventName({
+          attendeeName: "Attendee",
+          eventType: "Event",
+          host: "Host",
+          eventName: "{name}",
+          eventDuration: 30,
+          bookingFields: { name: { firstName: "Ada" } },
+          t: vi.fn(() => "translation") as TFunction,
+        })
+      ).toBe("Ada");
+    });
+
     it("converts location booking field values and stringifies primitive values", () => {
       const input = {
         attendeeName: "Attendee",
