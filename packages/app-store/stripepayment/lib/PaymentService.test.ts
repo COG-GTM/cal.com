@@ -1,8 +1,6 @@
-import process from "node:process";
 import { ErrorCode } from "@calcom/lib/errorCodes";
-import { ErrorWithCode } from "@calcom/lib/errors";
 import type { Booking, Payment, PaymentOption, Prisma } from "@calcom/prisma/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BuildPaymentService } from "./PaymentService";
 
 const mocks = vi.hoisted(() => ({
@@ -535,6 +533,10 @@ describe("StripePaymentService", () => {
   });
 
   describe("afterPayment", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     const booking = {
       id: 123,
       uid: "booking_uid",
@@ -562,8 +564,7 @@ describe("StripePaymentService", () => {
     });
 
     it("uses the configured delay and null attendee seat", async () => {
-      const previousDelay = process.env.AWAITING_PAYMENT_EMAIL_DELAY_MINUTES;
-      process.env.AWAITING_PAYMENT_EMAIL_DELAY_MINUTES = "30";
+      vi.stubEnv("AWAITING_PAYMENT_EMAIL_DELAY_MINUTES", "30");
       const before = Date.now();
 
       await BuildPaymentService(credentials).afterPayment({} as never, booking, createPayment({ id: 77 }));
@@ -575,8 +576,6 @@ describe("StripePaymentService", () => {
         paymentId: 77,
         attendeeSeatId: null,
       });
-      if (previousDelay === undefined) delete process.env.AWAITING_PAYMENT_EMAIL_DELAY_MINUTES;
-      else process.env.AWAITING_PAYMENT_EMAIL_DELAY_MINUTES = previousDelay;
     });
   });
 
