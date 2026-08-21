@@ -1,20 +1,18 @@
-import type { NextApiRequest } from "next";
-import type { Session } from "next-auth";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
 import { TeamRepository } from "@calcom/features/ee/teams/repositories/TeamRepository";
 import { PermissionCheckService } from "@calcom/features/pbac/services/permission-check.service";
 import { WEBAPP_URL } from "@calcom/lib/constants";
 import { MembershipRole } from "@calcom/prisma/enums";
-
+import type { NextApiRequest, NextApiResponse } from "next";
+import type { Session } from "next-auth";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BillingPortalServiceFactory,
-  TeamBillingPortalService,
   OrganizationBillingPortalService,
+  TeamBillingPortalService,
   UserBillingPortalService,
 } from "../../lib/BillingPortalService";
 import * as customerModule from "../../lib/customer";
-import { validateAuthentication, buildReturnUrl } from "../portal";
+import portalHandler, { buildReturnUrl, validateAuthentication } from "../portal";
 
 // Mock dependencies
 vi.mock("@calcom/features/pbac/services/permission-check.service");
@@ -240,6 +238,103 @@ describe("Portal API - Service-Based Architecture", () => {
 
       expect(result).toBe("cus_123");
       expect(mockCustomerModule.getStripeCustomerIdFromUserId).toHaveBeenCalledWith(123);
+    });
+  });
+
+  describe("handler", () => {
+    function createRequest(overrides: Partial<NextApiRequest> = {}) {
+      return {
+        method: "GET",
+        query: {},
+        session: { user: { id: 123 } },
+        ...overrides,
+      } as unknown as NextApiRequest;
+    }
+
+    function createResponse() {
+      return {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis(),
+        redirect: vi.fn().mockReturnThis(),
+        end: vi.fn().mockReturnThis(),
+        setHeader: vi.fn().mockReturnThis(),
+      } as unknown as NextApiResponse;
+    }
+
+    it("returns 405 for unsupported methods", async () => {
+      const res = createResponse();
+
+      await portalHandler(createRequest({ method: "DELETE" }), res);
+
+      expect(res.status).toHaveBeenCalledWith(405);
+      expect(res.json).toHaveBeenCalledWith({ message: "Method not allowed" });
+    });
+
+    it("returns 401 for unauthenticated requests", async () => {
+      const res = createResponse();
+
+      await portalHandler(createRequest({ session: null }), res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ message: "Not authenticated" });
+    });
+
+    it("processes a user billing portal request with the built return URL", async () => {
+      const processBillingPortal = vi.fn().mockResolvedValue("user-result");
+      vi.spyOn(BillingPortalServiceFactory, "createUserService").mockReturnValue({
+        processBillingPortal,
+      } as unknown as UserBillingPortalService);
+      const res = createResponse();
+
+      await portalHandler(createRequest({ query: { returnTo: `${WEBAPP_URL}/settings/teams` } }), res);
+
+      expect(processBillingPortal).toHaveBeenCalledWith(123, `${WEBAPP_URL}/settings/teams`, res);
+    });
+
+    it("parses teamId and processes a team billing portal request", async () => {
+      const processBillingPortal = vi.fn().mockResolvedValue("team-result");
+      const service = { processBillingPortal } as unknown as TeamBillingPortalService;
+      vi.spyOn(BillingPortalServiceFactory, "createService").mockResolvedValue(service);
+      const res = createResponse();
+
+      await portalHandler(
+        createRequest({ query: { teamId: "456", returnTo: `${WEBAPP_URL}/billing` } }),
+        res
+      );
+
+      expect(BillingPortalServiceFactory.createService).toHaveBeenCalledWith(456);
+      expect(processBillingPortal).toHaveBeenCalledWith(123, 456, `${WEBAPP_URL}/billing`, res);
+    });
+
+    it("returns 404 when the team is not found", async () => {
+      vi.spyOn(BillingPortalServiceFactory, "createService").mockRejectedValue(new Error("Team not found"));
+      const res = createResponse();
+
+      await portalHandler(createRequest({ query: { teamId: "456" } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ message: "Team not found" });
+    });
+
+    it("rethrows unexpected factory errors", async () => {
+      const error = new Error("Unexpected failure");
+      vi.spyOn(BillingPortalServiceFactory, "createService").mockRejectedValue(error);
+
+      await expect(
+        portalHandler(createRequest({ query: { teamId: "456" } }), createResponse())
+      ).rejects.toThrow(error);
+    });
+
+    it("uses the billing settings URL when returnTo is empty", async () => {
+      const processBillingPortal = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(BillingPortalServiceFactory, "createUserService").mockReturnValue({
+        processBillingPortal,
+      } as unknown as UserBillingPortalService);
+      const res = createResponse();
+
+      await portalHandler(createRequest({ query: { returnTo: "" } }), res);
+
+      expect(processBillingPortal).toHaveBeenCalledWith(123, `${WEBAPP_URL}/settings/billing`, res);
     });
   });
 });
