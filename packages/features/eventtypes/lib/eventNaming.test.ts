@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next";
 import { describe, expect, it, vi } from "vitest";
-
 import * as event from "./eventNaming";
 import { updateHostInEventName } from "./eventNaming";
 
@@ -546,6 +545,125 @@ describe("event tests", () => {
       const eventName = "John and John.Doe and John_Doe";
       const result = updateHostInEventName(eventName, oldHost, newHost);
       expect(result).toBe("John and Jane.Smith and John_Doe");
+    });
+  });
+
+  describe("additional booking field and scheduler substitutions", () => {
+    it("leaves scheduler first name unresolved when translation matches scheduler", () => {
+      const tFunc = vi.fn((key: string) => {
+        if (key === "scheduler") return "Attendee";
+        return key;
+      });
+
+      expect(
+        event.getEventName({
+          attendeeName: "Attendee",
+          eventType: "Event",
+          host: "Host",
+          eventName: "{Scheduler first name}",
+          eventDuration: 30,
+          t: tFunc as TFunction,
+        })
+      ).toBe("{Scheduler first name}");
+    });
+
+    it("replaces scheduler last name from the structured name booking field", () => {
+      expect(
+        event.getEventName({
+          attendeeName: "Attendee",
+          eventType: "Event",
+          host: "Host",
+          eventName: "{Scheduler last name}",
+          eventDuration: 30,
+          bookingFields: { name: { firstName: "Attendee", lastName: "Booker" } },
+          t: vi.fn(() => "translation") as TFunction,
+        })
+      ).toBe("Booker");
+    });
+
+    it("formats structured names with and without a last name", () => {
+      const input = {
+        eventType: "Event",
+        host: "Host",
+        eventDuration: 30,
+        t: vi.fn(() => "translation") as TFunction,
+      };
+
+      expect(
+        event.getEventName({
+          ...input,
+          attendeeName: { firstName: "Ada" },
+          eventName: "{Scheduler}",
+        })
+      ).toBe("Ada undefined");
+      expect(
+        event.getEventName({
+          ...input,
+          attendeeName: { firstName: "Ada", lastName: "Lovelace" },
+          eventName: "{Scheduler}",
+        })
+      ).toBe("Ada Lovelace");
+    });
+
+    it("formats a name booking field without a last name", () => {
+      expect(
+        event.getEventName({
+          attendeeName: "Attendee",
+          eventType: "Event",
+          host: "Host",
+          eventName: "{name}",
+          eventDuration: 30,
+          bookingFields: { name: { firstName: "Ada" } },
+          t: vi.fn(() => "translation") as TFunction,
+        })
+      ).toBe("Ada");
+    });
+
+    it("converts location booking field values and stringifies primitive values", () => {
+      const input = {
+        attendeeName: "Attendee",
+        eventType: "Event",
+        host: "Host",
+        eventDuration: 30,
+        t: vi.fn(() => "translation") as TFunction,
+      };
+
+      expect(
+        event.getEventName({
+          ...input,
+          eventName: "{location}",
+          bookingFields: { location: { value: "attendeeInPerson" } },
+        })
+      ).toBe("in_person_attendee_address");
+      expect(
+        event.getEventName({
+          ...input,
+          eventName: "{count}",
+          bookingFields: { count: 3 },
+        })
+      ).toBe("3");
+    });
+
+    it("removes missing, falsy, and unusable object booking fields", () => {
+      const input = {
+        attendeeName: "Attendee",
+        eventType: "Event",
+        host: "Host",
+        eventDuration: 30,
+        t: vi.fn(() => "translation") as TFunction,
+      };
+
+      expect(
+        event.getEventName({
+          ...input,
+          eventName: "{missing}-{zero}-{empty}-{object}",
+          bookingFields: {
+            zero: 0,
+            empty: "",
+            object: { label: "Only a label" },
+          },
+        })
+      ).toBe("---");
     });
   });
 });
