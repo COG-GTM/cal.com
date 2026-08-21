@@ -24,12 +24,15 @@ vi.mock("@calcom/prisma", () => ({
   default: {},
 }));
 
-const mockPermissionService = vi.mocked(PermissionCheckService);
 const mockTeamRepository = vi.mocked(TeamRepository);
 const mockCustomerModule = vi.mocked(customerModule);
 
+type SessionWithPartialUser = Omit<Session, "user"> & {
+  user: Partial<Session["user"]>;
+};
+
 interface RequestWithSession extends NextApiRequest {
-  session?: Session | null;
+  session?: Session | SessionWithPartialUser | null;
 }
 
 interface MockPermissionService {
@@ -72,11 +75,11 @@ describe("Portal API - Service-Based Architecture", () => {
     it("should return null when user id is missing", () => {
       const req = {
         session: {
-          user: {} as any,
+          user: {},
           hasValidLicense: true,
           upId: "test-upid",
           expires: "2024-12-31T23:59:59.999Z",
-        } as Session,
+        },
       } as RequestWithSession;
 
       const result = validateAuthentication(req as NextApiRequest);
