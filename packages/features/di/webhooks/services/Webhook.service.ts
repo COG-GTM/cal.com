@@ -1,13 +1,11 @@
-import { createModule } from "@evyweb/ioctopus";
-
 import { BookingWebhookService } from "@calcom/features/webhooks/lib/service/BookingWebhookService";
 import { FormWebhookService } from "@calcom/features/webhooks/lib/service/FormWebhookService";
 import { OOOWebhookService } from "@calcom/features/webhooks/lib/service/OOOWebhookService";
 import { RecordingWebhookService } from "@calcom/features/webhooks/lib/service/RecordingWebhookService";
 import { WebhookService } from "@calcom/features/webhooks/lib/service/WebhookService";
-
+import { createModule } from "@evyweb/ioctopus";
 import { SHARED_TOKENS } from "../../shared/shared.tokens";
-import { WEBHOOK_TOKENS } from "../webhooks.tokens";
+import { WEBHOOK_TOKENS } from "../Webhooks.tokens";
 
 export const webhookServicesModule = createModule();
 
