@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-
 import { currencyOptions, currencySymbols, isAcceptedCurrencyCode } from "./currencyOptions";
 
 describe("currencyOptions", () => {

@@ -1,5 +1,4 @@
 import prismaMock from "@calcom/testing/lib/__mocks__/prismaMock";
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createOrder = vi.fn();
@@ -12,7 +11,6 @@ vi.mock("@calcom/app-store/paypal/lib/Paypal", () => ({
 
 import Paypal from "@calcom/app-store/paypal/lib/Paypal";
 import { ErrorCode } from "@calcom/lib/errorCodes";
-
 import { paymentOptionEnum } from "../zod";
 import { BuildPaymentService } from "./PaymentService";
 
@@ -93,7 +91,9 @@ describe("PaypalPaymentService", () => {
   // paymentOptionEnum, so every call currently ends in a throw before any order is created.
   describe("collectCard", () => {
     it("rejects HOLD because the paypal app does not offer it", async () => {
-      await expect(buildService().collectCard({ amount: 100, currency: "USD" }, 42, "HOLD")).rejects.toThrow();
+      await expect(
+        buildService().collectCard({ amount: 100, currency: "USD" }, 42, "HOLD")
+      ).rejects.toThrow();
       expect(createOrder).not.toHaveBeenCalled();
     });
 
@@ -153,12 +153,9 @@ describe("PaypalPaymentService", () => {
       await expect(buildService()[method]()).rejects.toThrow("Method not implemented.");
     });
 
-    it.each(["chargeCard", "getPaymentPaidStatus", "getPaymentDetails"] as const)(
-      "%s throws",
-      (method) => {
-        expect(() => buildService()[method]()).toThrow("Method not implemented.");
-      }
-    );
+    it.each(["chargeCard", "getPaymentPaidStatus", "getPaymentDetails"] as const)("%s throws", (method) => {
+      expect(() => buildService()[method]()).toThrow("Method not implemented.");
+    });
 
     it("afterPayment resolves without doing anything", async () => {
       await expect(buildService().afterPayment()).resolves.toBeUndefined();

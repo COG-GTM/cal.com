@@ -1,7 +1,5 @@
 import prismaMock from "@calcom/testing/lib/__mocks__/prismaMock";
-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import Paypal from "./Paypal";
 
 const fetchMock = vi.fn();
@@ -330,9 +328,9 @@ describe("Paypal", () => {
     it("throws when the request is malformed", async () => {
       const client = await authenticatedClient();
 
-      await expect(
-        client.verifyWebhook({ body: { auth_algo: "SHA256withRSA" } } as never)
-      ).rejects.toThrow("Request is malformed");
+      await expect(client.verifyWebhook({ body: { auth_algo: "SHA256withRSA" } } as never)).rejects.toThrow(
+        "Request is malformed"
+      );
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
