@@ -7,7 +7,7 @@ import {
   transformWorkingHoursForAtom,
 } from "./index";
 
-function utcTime(hours: number, minutes = 0): Date {
+function utcTime(hours: number, minutes: number = 0): Date {
   return new Date(Date.UTC(1970, 0, 1, hours, minutes));
 }
 
