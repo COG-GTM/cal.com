@@ -307,6 +307,60 @@ describe("Tests the slot logic", () => {
     expect(slots).toHaveLength(5);
   });
 
+  it("includes a slot ending at most one second after a date range ends and excludes one that would overrun it further", async () => {
+    const slots = getSlots({
+      inviteeDate: dayjs.tz("2023-07-13T00:00:00.000", "America/New_York"),
+      frequency: 30,
+      minimumBookingNotice: 0,
+      eventLength: 30,
+      dateRanges: [
+        {
+          start: dayjs.tz("2023-07-13T09:00:00.000", "America/New_York"),
+          end: dayjs.tz("2023-07-13T10:00:00.000", "America/New_York"),
+        },
+        {
+          start: dayjs.tz("2023-07-13T11:00:00.000", "America/New_York"),
+          end: dayjs.tz("2023-07-13T11:29:59.000", "America/New_York"),
+        },
+        {
+          start: dayjs.tz("2023-07-13T12:00:00.000", "America/New_York"),
+          end: dayjs.tz("2023-07-13T12:29:58.000", "America/New_York"),
+        },
+      ],
+    });
+
+    expect(slots.map((slot) => slot.time.format())).toEqual([
+      "2023-07-13T09:00:00-04:00",
+      "2023-07-13T09:30:00-04:00",
+      "2023-07-13T11:00:00-04:00",
+    ]);
+  });
+
+  it("keeps slots that run across a spring-forward DST change", async () => {
+    const slots = getSlots({
+      inviteeDate: dayjs.tz("2026-03-08T00:00:00.000", "America/Los_Angeles"),
+      frequency: 15,
+      minimumBookingNotice: 0,
+      eventLength: 60,
+      dateRanges: [
+        {
+          start: dayjs.tz("2026-03-08T00:30:00.000", "America/Los_Angeles"),
+          end: dayjs.tz("2026-03-08T04:00:00.000", "America/Los_Angeles"),
+        },
+      ],
+    });
+
+    expect(slots.map((slot) => slot.time.toISOString())).toEqual([
+      "2026-03-08T08:30:00.000Z",
+      "2026-03-08T08:45:00.000Z",
+      "2026-03-08T09:00:00.000Z",
+      "2026-03-08T09:15:00.000Z",
+      "2026-03-08T09:30:00.000Z",
+      "2026-03-08T09:45:00.000Z",
+      "2026-03-08T10:00:00.000Z",
+    ]);
+  });
+
   it("tests slots for events with an event length that is not divisible by 5", async () => {
     const slots = getSlots({
       inviteeDate: dayjs.utc().startOf("day"),

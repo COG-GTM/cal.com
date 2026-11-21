@@ -247,13 +247,14 @@ export function isTimeOutOfBounds({
   time: dayjs.ConfigType;
   minimumBookingNotice?: number;
 }) {
-  const date = dayjs(time);
+  const date = dayjs(time).toDate();
 
-  guardAgainstBookingInThePast(date.toDate());
+  guardAgainstBookingInThePast(date);
 
+  // Called once per slot, so compare epoch ms instead of building and comparing Dayjs objects.
   if (minimumBookingNotice) {
-    const minimumBookingStartDate = dayjs().add(minimumBookingNotice, "minutes");
-    if (date.isBefore(minimumBookingStartDate)) {
+    const minimumBookingStartMs = Date.now() + minimumBookingNotice * 60_000;
+    if (date.valueOf() < minimumBookingStartMs) {
       return true;
     }
   }
