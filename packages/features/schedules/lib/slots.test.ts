@@ -307,6 +307,31 @@ describe("Tests the slot logic", () => {
     expect(slots).toHaveLength(5);
   });
 
+  it("includes a slot that ends exactly at the end of a date range and excludes one that would overrun it", async () => {
+    const slots = getSlots({
+      inviteeDate: dayjs.tz("2023-07-13T00:00:00.000", "America/New_York"),
+      frequency: 30,
+      minimumBookingNotice: 0,
+      eventLength: 30,
+      dateRanges: [
+        {
+          start: dayjs.tz("2023-07-13T09:00:00.000", "America/New_York"),
+          end: dayjs.tz("2023-07-13T10:00:00.000", "America/New_York"),
+        },
+        {
+          start: dayjs.tz("2023-07-13T11:00:00.000", "America/New_York"),
+          end: dayjs.tz("2023-07-13T11:59:00.000", "America/New_York"),
+        },
+      ],
+    });
+
+    expect(slots.map((slot) => slot.time.format())).toEqual([
+      "2023-07-13T09:00:00-04:00",
+      "2023-07-13T09:30:00-04:00",
+      "2023-07-13T11:00:00-04:00",
+    ]);
+  });
+
   it("tests slots for events with an event length that is not divisible by 5", async () => {
     const slots = getSlots({
       inviteeDate: dayjs.utc().startOf("day"),

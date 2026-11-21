@@ -121,6 +121,7 @@ function buildSlotsWithDateRanges({
   }
 
   const startTimeWithMinNotice = dayjs.utc().add(minimumBookingNotice, "minute");
+  const eventLengthMs = eventLength * 60_000;
 
   const slotBoundaries = new Map<number, true>();
 
@@ -175,7 +176,9 @@ function buildSlotsWithDateRanges({
       }
     }
 
-    while (!slotStartTime.add(eventLength, "minutes").subtract(1, "second").utc().isAfter(range.end)) {
+    // Compare epoch ms instead of chaining Dayjs add/subtract/utc/isAfter, which allocate and are slow per slot.
+    const rangeEndMs = range.end.valueOf();
+    while (slotStartTime.valueOf() + eventLengthMs - 1000 <= rangeEndMs) {
       const slotKey = slotStartTime.toISOString();
       if (slots.has(slotKey)) {
         slotStartTime = slotStartTime.add(frequency + (offsetStart ?? 0), "minutes");
