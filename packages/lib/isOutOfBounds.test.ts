@@ -36,4 +36,13 @@ describe("isTimeOutOfBounds", () => {
     expect(isTimeOutOfBounds({ time: time.valueOf(), minimumBookingNotice: 60 })).toBe(true);
     expect(isTimeOutOfBounds({ time: time.tz("Asia/Kolkata"), minimumBookingNotice: 15 })).toBe(false);
   });
+
+  it("compares the instant of a timezone-aware time in a repeated DST hour against the notice cutoff", () => {
+    vi.setSystemTime(new Date("2026-11-01T05:00:00.000Z"));
+    // 05:30Z and 06:30Z are both 01:30 in New York on the fall-back day; the cutoff (06:00Z) falls between them.
+    const firstOccurrence = dayjs.utc("2026-11-01T05:30:00.000Z").tz("America/New_York");
+    const secondOccurrence = dayjs.utc("2026-11-01T06:30:00.000Z").tz("America/New_York");
+    expect(isTimeOutOfBounds({ time: firstOccurrence, minimumBookingNotice: 60 })).toBe(true);
+    expect(isTimeOutOfBounds({ time: secondOccurrence, minimumBookingNotice: 60 })).toBe(false);
+  });
 });
